@@ -74,10 +74,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: dist
+          merge-multiple: true
 
-      - name: Flatten artifact directory
+      - name: Verify release assets
         run: |
-          find dist -type f -exec mv {} dist/ \;
+          ls -lah dist
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
