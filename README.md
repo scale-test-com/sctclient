@@ -1,86 +1,88 @@
 # Scale-Test CLI
 
-Client en ligne de commande en Go pour piloter l API Scale-Test.
+A command-line client for the Scale-Test load testing API.
 
-## Fonctionnalites
+## Features
 
-- Creation d un run de test de charge
-- Recuperation des details d un run
-- Suppression d un run
-- Authentification par API key via argument ou variable d environnement
-- Option d attente active jusqu a l etat final du run
+- Create a load test run
+- Retrieve run details
+- Delete a run
+- Authenticate with an API key using a flag or environment variable
+- Optional wait mode until a run reaches a terminal state
 
-## Prerequis
+## Requirements
 
 - Go 1.22+
-- Une API key Scale-Test valide
+- A valid Scale-Test API key
 
 ## Installation
 
-### Depuis le code source
+### From source
 
 ```bash
 go build -o scale-test .
 ```
 
-### Depuis une release GitHub
+### From GitHub Releases
 
-Telechargez l archive correspondant a votre OS depuis la page Releases.
+Download the archive for your operating system from the Releases page.
 
 ## Configuration
 
-Les parametres globaux peuvent etre passes en flag ou en variables d environnement.
+Global settings can be provided with flags or environment variables.
 
 - API key:
-  - flag: --api-key
-  - env: SCALE_TEST_API_KEY
-- URL API:
-  - flag: --base-url
-  - env: SCALE_TEST_BASE_URL
-  - valeur par defaut: https://scale-test.com/api/v1
+  - flag: `--api-key`
+  - env: `SCALE_TEST_API_KEY`
+- API base URL:
+  - flag: `--base-url`
+  - env: `SCALE_TEST_BASE_URL`
+  - default: `https://scale-test.com/api/v1`
 
-Priorite: flag > variable d environnement > valeur par defaut.
+Priority: flag > environment variable > default.
 
-## Commandes
+> The CLI requires an API key. If `--api-key` is provided, it is used first. Otherwise the CLI reads `SCALE_TEST_API_KEY`.
 
-### Aide
+## Commands
+
+### Help
 
 ```bash
 ./scale-test --help
 ./scale-test run --help
 ```
 
-### Creer un run avec un scenario existant
+### Create a run using an existing scenario
 
 ```bash
 ./scale-test --api-key <API_KEY> run create --scenario-id 123
 ```
 
-### Creer un run a partir d un fichier YAML
+### Create a run from a YAML file
 
 ```bash
 ./scale-test run create --file scenario.yaml
 ```
 
-### Creer un run et attendre la fin
+### Create a run and wait until completion
 
 ```bash
 ./scale-test run create --scenario-id 123 --wait --poll-interval 2s
 ```
 
-### Recuperer un run
+### Get a run
 
 ```bash
 ./scale-test run get <RUN_UUID>
 ```
 
-### Supprimer un run
+### Delete a run
 
 ```bash
 ./scale-test run delete <RUN_UUID>
 ```
 
-## Exemple de scenario YAML
+## Example YAML scenario
 
 ```yaml
 name: Test API
@@ -99,18 +101,12 @@ operations:
 
 ## Output
 
-- Les resultats JSON sont ecrits sur stdout
-- Les messages de progression (mode --wait) sont ecrits sur stderr
+- JSON results are written to `stdout`
+- Progress messages (in `--wait` mode) are written to `stderr`
 
-## Release automatisee sur tag
+## Localized documentation
 
-Le workflow GitHub Actions publie automatiquement une release et les binaires Linux, macOS, Windows quand un tag est pousse.
+For more usage details, see the `doc/` folder:
 
-Exemple:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-Le workflow est defini dans .github/workflows/release.yml.
+- `doc/en.md` — English usage guide
+- `doc/fr.md` — French usage guide
