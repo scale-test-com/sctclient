@@ -143,3 +143,43 @@ func TestNewRequestErrorWithInvalidBaseURL(t *testing.T) {
 		t.Fatal("expected newRequest error")
 	}
 }
+
+func TestGetRunResultsSuccess(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/runs/abc/results" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		_, _ = w.Write([]byte(`{"data":{"state":"success","executed_requests":10,"duration_seconds":2,"completed_at":null,"summary":{"total_requests":10,"success_rate":null,"average_ms":null,"requests_per_second":null,"status_codes":[{"status_code":200,"count":10}]}}}`))
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "key")
+	res, err := c.GetRunResults("abc")
+	if err != nil {
+		t.Fatalf("GetRunResults failed: %v", err)
+	}
+	if res.State != "success" || res.Summary.TotalRequests != 10 || res.Summary.SuccessRate != nil || len(res.Summary.StatusCodes) != 1 {
+		t.Fatalf("unexpected results: %+v", res)
+	}
+}
+
+func TestGetRunTimeseriesQuery(t *testing.T) {
+	var gotQuery string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/runs/abc/results/timeseries" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		gotQuery = r.URL.RawQuery
+		_, _ = w.Write([]byte(`{"data":{"requests_per_second":[{"executed_at":"2026-01-01 10:00:00","requests_per_second":10}]}}`))
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "key")
+	series, err := c.GetRunTimeseries("abc", "requests_per_second")
+	if err != nil {
+		t.Fatalf("GetRunTimeseries failed: %v", err)
+	}
+	if gotQuery != "metric=requests_per_second" || len(series.RequestsPerSecond) != 1 || series.StatusCodes != nil {
+		t.Fatalf("unexpected query %q or series %+v", gotQuery, series)
+	}
+}

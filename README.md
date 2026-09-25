@@ -7,6 +7,7 @@ A command-line client for the Scale-Test load testing API.
 - Create a load test run
 - Retrieve run details
 - Delete a run
+- Retrieve aggregated results and per-second time series of a finished run
 - Authenticate with an API key using a flag or environment variable
 - Optional wait mode until a run reaches a terminal state
 
@@ -81,6 +82,22 @@ Priority: flag > environment variable > default.
 ```bash
 ./scale-test run delete <RUN_UUID>
 ```
+
+### Get the aggregated results of a run
+
+```bash
+./scale-test run results <RUN_UUID>
+```
+
+### Get per-second time series (optionally a single metric)
+
+```bash
+./scale-test run timeseries <RUN_UUID>
+./scale-test run timeseries <RUN_UUID> --metric success_rate
+```
+
+Available metrics: `status_codes`, `success_rate`, `average_duration`, `requests_per_second`.
+Both commands need a finished run; while it is in progress the API answers `409`.
 
 ## Example YAML scenario
 

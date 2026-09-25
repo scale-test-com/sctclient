@@ -56,6 +56,7 @@ func resetGlobals(t *testing.T) {
 	createFile = ""
 	createWait = false
 	createPollInterval = 2 * time.Second
+	timeseriesMetric = ""
 	apiKey = ""
 	baseURL = ""
 	client = nil
@@ -140,7 +141,7 @@ func TestRunCreateWithWait(t *testing.T) {
 			getCount++
 			state := "running"
 			if getCount >= 2 {
-				state = "completed"
+				state = "success"
 			}
 			_, _ = w.Write([]byte(fmt.Sprintf(`{"data":{"id":"r2","created_at":"2026-01-01T00:00:00Z","state":"%s"}}`, state)))
 		default:
@@ -163,7 +164,7 @@ func TestRunCreateWithWait(t *testing.T) {
 	if !strings.Contains(errOut, "Waiting for completion") {
 		t.Fatalf("expected progress on stderr, got: %s", errOut)
 	}
-	if !strings.Contains(out, "\"state\": \"completed\"") {
+	if !strings.Contains(out, "\"state\": \"success\"") {
 		t.Fatalf("expected completed run json, got: %s", out)
 	}
 }
@@ -314,5 +315,101 @@ func TestRootPersistentFlagsExist(t *testing.T) {
 	help := buf.String()
 	if !strings.Contains(help, "--api-key") || !strings.Contains(help, "--base-url") {
 		t.Fatalf("expected global flags in help output: %s", help)
+	}
+}
+
+func TestRunResults(t *testing.T) {
+	resetGlobals(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/runs/r1/results" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		_, _ = w.Write([]byte(`{"data":{"state":"success","executed_requests":40,"duration_seconds":2,"completed_at":"2026-01-01T00:00:02Z","summary":{"total_requests":40,"success_rate":0.95,"average_ms":175,"requests_per_second":{"average":20,"peak":30},"status_codes":[{"status_code":200,"count":38},{"status_code":500,"count":2}]}}}`))
+	}))
+	defer server.Close()
+
+	client = api.NewClient(server.URL, "k")
+	out, _, err := captureOutput(t, func() error {
+		return runResultsCmd.RunE(runResultsCmd, []string{"r1"})
+	})
+	if err != nil {
+		t.Fatalf("run results failed: %v", err)
+	}
+	for _, want := range []string{"\"total_requests\": 40", "\"success_rate\": 0.95", "\"peak\": 30", "\"status_code\": 500"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected %s in output: %s", want, out)
+		}
+	}
+}
+
+func TestRunResultsNotReady(t *testing.T) {
+	resetGlobals(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusConflict)
+		_, _ = w.Write([]byte(`{"error":"Results not available yet (run state: running)"}`))
+	}))
+	defer server.Close()
+
+	client = api.NewClient(server.URL, "k")
+	err := runResultsCmd.RunE(runResultsCmd, []string{"r1"})
+	if err == nil || !strings.Contains(err.Error(), "get run results") || !strings.Contains(err.Error(), "409") {
+		t.Fatalf("expected wrapped 409 error, got: %v", err)
+	}
+}
+
+func TestRunTimeseriesMetric(t *testing.T) {
+	resetGlobals(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/runs/r1/results/timeseries" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if got := r.URL.Query().Get("metric"); got != "success_rate" {
+			t.Fatalf("unexpected metric: %q", got)
+		}
+		_, _ = w.Write([]byte(`{"data":{"success_rate":[{"executed_at":"2026-01-01 10:00:00","success_rate":0.8}]}}`))
+	}))
+	defer server.Close()
+
+	client = api.NewClient(server.URL, "k")
+	timeseriesMetric = "success_rate"
+	out, _, err := captureOutput(t, func() error {
+		return runTimeseriesCmd.RunE(runTimeseriesCmd, []string{"r1"})
+	})
+	if err != nil {
+		t.Fatalf("run timeseries failed: %v", err)
+	}
+	if !strings.Contains(out, "\"success_rate\": 0.8") || strings.Contains(out, "status_codes") {
+		t.Fatalf("unexpected output: %s", out)
+	}
+}
+
+func TestRunTimeseriesAllSeriesHasNoQuery(t *testing.T) {
+	resetGlobals(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.RawQuery != "" {
+			t.Fatalf("expected no query string, got: %s", r.URL.RawQuery)
+		}
+		_, _ = w.Write([]byte(`{"data":{}}`))
+	}))
+	defer server.Close()
+
+	client = api.NewClient(server.URL, "k")
+	if _, _, err := captureOutput(t, func() error {
+		return runTimeseriesCmd.RunE(runTimeseriesCmd, []string{"r1"})
+	}); err != nil {
+		t.Fatalf("run timeseries failed: %v", err)
+	}
+}
+
+func TestRunCreateWaitStopsOnEveryTerminalState(t *testing.T) {
+	for _, state := range []string{"success", "failed", "stopped"} {
+		if !terminalStates[state] {
+			t.Fatalf("%s should be a terminal state", state)
+		}
+	}
+	for _, state := range []string{"pending", "providing", "running", "compiling"} {
+		if terminalStates[state] {
+			t.Fatalf("%s should not be a terminal state", state)
+		}
 	}
 }

@@ -21,9 +21,9 @@ var (
 
 // terminalStates are run states that indicate the run has finished.
 var terminalStates = map[string]bool{
-	"completed": true,
-	"failed":    true,
-	"cancelled": true,
+	"success": true,
+	"failed":  true,
+	"stopped": true,
 }
 
 var runCreateCmd = &cobra.Command{
@@ -36,7 +36,7 @@ Provide the scenario via one of these flags:
   --file <path>         Load a YAML scenario file
 
 Both flags may be combined; the server gives priority to the inline content.
-Use --wait to poll until the run reaches a terminal state (completed/failed/cancelled).`,
+Use --wait to poll until the run reaches a terminal state (success/failed/stopped).`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		reqBody := model.CreateRunRequest{}
 

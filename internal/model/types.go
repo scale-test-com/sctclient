@@ -41,11 +41,11 @@ type CreateRunRequest struct {
 
 // CreateRunResponse is the response body for POST /run/new.
 type CreateRunResponse struct {
-	ID         string  `json:"id"`
-	State      string  `json:"state"`
-	CreatedAt  string  `json:"created_at"`
-	ScenarioID *int    `json:"scenario_id"`
-	Message    string  `json:"message"`
+	ID         string `json:"id"`
+	State      string `json:"state"`
+	CreatedAt  string `json:"created_at"`
+	ScenarioID *int   `json:"scenario_id"`
+	Message    string `json:"message"`
 }
 
 // Run represents a full run with all details.
@@ -74,4 +74,78 @@ type ErrorResponse struct {
 // SuccessMessage is returned by successful deletion responses.
 type SuccessMessage struct {
 	Message string `json:"message"`
+}
+
+// StatusCodeCount is the total number of responses for one HTTP status code.
+type StatusCodeCount struct {
+	StatusCode int `json:"status_code"`
+	Count      int `json:"count"`
+}
+
+// RPSStats holds the average and peak requests-per-second of a run.
+type RPSStats struct {
+	Average float64 `json:"average"`
+	Peak    float64 `json:"peak"`
+}
+
+// ResultsSummary is the run-wide aggregate of GET /runs/{id}/results.
+type ResultsSummary struct {
+	TotalRequests     int               `json:"total_requests"`
+	SuccessRate       *float64          `json:"success_rate"`
+	AverageMS         *float64          `json:"average_ms"`
+	RequestsPerSecond *RPSStats         `json:"requests_per_second"`
+	StatusCodes       []StatusCodeCount `json:"status_codes"`
+}
+
+// RunResults is the payload of GET /runs/{id}/results.
+type RunResults struct {
+	State            string         `json:"state"`
+	ExecutedRequests *int           `json:"executed_requests"`
+	DurationSeconds  *int           `json:"duration_seconds"`
+	CompletedAt      *string        `json:"completed_at"`
+	Summary          ResultsSummary `json:"summary"`
+}
+
+// GetRunResultsResponse wraps RunResults in the `data` field.
+type GetRunResultsResponse struct {
+	Data RunResults `json:"data"`
+}
+
+// StatusCodeSample is the count of one status code during one second.
+type StatusCodeSample struct {
+	ExecutedAt string `json:"executed_at"`
+	StatusCode int    `json:"status_code"`
+	Count      int    `json:"count"`
+}
+
+// SuccessRateSample is the success rate (0 to 1) during one second.
+type SuccessRateSample struct {
+	ExecutedAt  string  `json:"executed_at"`
+	SuccessRate float64 `json:"success_rate"`
+}
+
+// AverageDurationSample is the average request duration during one second.
+type AverageDurationSample struct {
+	ExecutedAt string  `json:"executed_at"`
+	AverageMS  float64 `json:"average_ms"`
+}
+
+// RequestsPerSecondSample is the number of requests executed during one second.
+type RequestsPerSecondSample struct {
+	ExecutedAt        string  `json:"executed_at"`
+	RequestsPerSecond float64 `json:"requests_per_second"`
+}
+
+// RunTimeseries is the payload of GET /runs/{id}/results/timeseries.
+// Only the requested series are present.
+type RunTimeseries struct {
+	StatusCodes       []StatusCodeSample        `json:"status_codes,omitempty"`
+	SuccessRate       []SuccessRateSample       `json:"success_rate,omitempty"`
+	AverageDuration   []AverageDurationSample   `json:"average_duration,omitempty"`
+	RequestsPerSecond []RequestsPerSecondSample `json:"requests_per_second,omitempty"`
+}
+
+// GetRunTimeseriesResponse wraps RunTimeseries in the `data` field.
+type GetRunTimeseriesResponse struct {
+	Data RunTimeseries `json:"data"`
 }

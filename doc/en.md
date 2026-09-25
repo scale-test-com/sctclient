@@ -2,7 +2,7 @@
 
 ## Overview
 
-`scale-test` is a CLI client for the Scale-Test API. It supports creating, retrieving, and deleting load test runs.
+`scale-test` is a CLI client for the Scale-Test API. It supports creating, retrieving, deleting and analysing (results, time series) load test runs.
 
 ## Authentication
 
@@ -56,6 +56,26 @@ Delete a run.
 
 ```bash
 ./scale-test run delete <RUN_UUID>
+```
+
+### `run results`
+
+Retrieve the aggregated results of a finished run: total requests, success rate, average duration,
+requests per second (average and peak) and HTTP status code breakdown.
+While the run is still in progress, the API answers `409`.
+
+```bash
+./scale-test run results <RUN_UUID>
+```
+
+### `run timeseries`
+
+Retrieve the per-second metrics of a finished run (UTC timestamps). Use `--metric` to restrict the
+output to one series: `status_codes`, `success_rate`, `average_duration` or `requests_per_second`.
+
+```bash
+./scale-test run timeseries <RUN_UUID>
+./scale-test run timeseries <RUN_UUID> --metric requests_per_second
 ```
 
 ## Example YAML

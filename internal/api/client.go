@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -114,4 +115,34 @@ func (c *Client) DeleteRun(id string) (*model.SuccessMessage, error) {
 		return nil, err
 	}
 	return &out, nil
+}
+
+// GetRunResults calls GET /runs/{id}/results.
+func (c *Client) GetRunResults(id string) (*model.RunResults, error) {
+	req, err := c.newRequest("GET", "/runs/"+id+"/results", nil)
+	if err != nil {
+		return nil, err
+	}
+	var out model.GetRunResultsResponse
+	if err := c.do(req, &out); err != nil {
+		return nil, err
+	}
+	return &out.Data, nil
+}
+
+// GetRunTimeseries calls GET /runs/{id}/results/timeseries. An empty metric returns every series.
+func (c *Client) GetRunTimeseries(id, metric string) (*model.RunTimeseries, error) {
+	path := "/runs/" + id + "/results/timeseries"
+	if metric != "" {
+		path += "?metric=" + url.QueryEscape(metric)
+	}
+	req, err := c.newRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var out model.GetRunTimeseriesResponse
+	if err := c.do(req, &out); err != nil {
+		return nil, err
+	}
+	return &out.Data, nil
 }
